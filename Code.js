@@ -10,7 +10,7 @@ var global_answers = [[{'answer': 'Obama', 'correct': false}, {'answer': 'Biden'
  * @return {CardService.Card} The card to show the user.
  */
 function onHomepage(e) {
-  return createSelectionCard(e, DEFAULT_INPUT_TEXT, DEFAULT_OUTPUT_TEXT);
+  return createSelectionCard(e, DEFAULT_OUTPUT_TEXT);
 }
 
 /**
@@ -18,26 +18,26 @@ function onHomepage(e) {
  * @param {String} inputText The text used for generating questions.
  * @return {CardService.Card} The card to show to the user.
  */
-function createSelectionCard(e, inputText, outputText) {
+function createSelectionCard(e, outputText) {
   var hostApp = e['hostApp'];
   var builder = CardService.newCardBuilder();
   
-  var userInputSection = CardService.newCardSection()
-    .addWidget(CardService.newTextInput()
-      .setFieldName('input')
-      .setValue(inputText)
-      .setTitle('Enter text to generate questions from...')
-      .setMultiline(true));
+  var userInputSection = CardService.newCardSection();
+  //   .addWidget(CardService.newTextInput()
+  //     .setFieldName('input')
+  //     .setValue(inputText)
+  //     .setTitle('Enter text to generate questions from...')
+  //     .setMultiline(true));
 
-  userInputSection.addWidget(CardService.newButtonSet()
-    .addButton(CardService.newTextButton()
-      .setText('Copy Selected Text')
-      .setOnClickAction(CardService.newAction().setFunctionName('getDocsSelection'))
-      .setDisabled(false))
-    .addButton(CardService.newTextButton()
-      .setText('Clear')
-      .setOnClickAction(CardService.newAction().setFunctionName('clearText'))
-      .setDisabled(false)));
+  // userInputSection.addWidget(CardService.newButtonSet()
+  //   .addButton(CardService.newTextButton()
+  //     .setText('Copy Selected Text')
+  //     .setOnClickAction(CardService.newAction().setFunctionName('getDocsSelection'))
+  //     .setDisabled(false))
+  //   .addButton(CardService.newTextButton()
+  //     .setText('Clear')
+  //     .setOnClickAction(CardService.newAction().setFunctionName('clearText'))
+  //     .setDisabled(false)));
 
   userInputSection.addWidget(CardService.newDecoratedText()
     .setText("Show answers")
@@ -46,9 +46,12 @@ function createSelectionCard(e, inputText, outputText) {
       .setFieldName("shouldShowAnswers")
       .setValue("true")));
 
-  userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 10).setTitle("Number of questions"));
+  userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 5).setTitle("Max number of questions"));
 
   builder.addSection(userInputSection);
+  builder.addSection(CardService.newCardSection()
+    .addWidget(CardService.newTextParagraph()
+    .setText("Highlight select text in the document, then click the button!")));
   
   builder.addSection(CardService.newCardSection()
     .addWidget(CardService.newButtonSet()
@@ -83,7 +86,7 @@ function createSelectionCard(e, inputText, outputText) {
  * @return {CardService.Card} The card to show to the user.
  */
 function clearText(e) {
-  return createSelectionCard(e, DEFAULT_INPUT_TEXT);
+  return createSelectionCard(e, DEFAULT_OUTPUT_TEXT);
 }
 
 /**
@@ -91,20 +94,13 @@ function clearText(e) {
  * @return void, simply appends to the document
  */
 function generateQuestions(e) {
-  var inputText = e.formInput.input ?? '';
+  // var inputText = e.formInput.input ?? '';
+  var inputText = getDocsSelection();
+  Logger.log(inputText);
   var numberOfQuestions = e.formInput.numberOfQuestions ?? 10;
   var shouldShowAnswers = e.formInput.shouldShowAnswers ?? 'false';
   var shouldGenerateNewDoc = e.formInput.shouldGenerateNewDoc ?? 'false'; // TODO: generate new doc w/ questions
-  // var fontColor = e.formInput.fontColor ?? 'red'; // TODO: write questions in fontColor
 
-  // var query = "joke"
-  // var url = "https://dad-jokes.p.rapidapi.com/random/" + query; // TODO: Call http://104.198.92.212/ instead
-  // var options = {
-  //   headers: {
-  //     'x-rapidapi-host': 'dad-jokes.p.rapidapi.com',
-  //     'x-rapidapi-key': '2aad18d4aamshe379f00afc91688p10252ajsn2974d3aeb21d'
-  //   }
-  // }
   var url = 'http://104.198.92.212';
   var data = {
     'text': inputText,
@@ -119,23 +115,25 @@ function generateQuestions(e) {
     'payload' : JSON.stringify(data)
   };
 
-
-  var response = UrlFetchApp.fetch(url, options);
-  var json = response.getContentText();
-  var data = JSON.parse(json);
-
-  var qaPairs = data.qa_pairs;
-  var questions = qaPairs.map(qa => qa.question);
-  var answers = qaPairs.map(qa => qa.answer);
+  try {
+    Logger.log("I am trying to fetch now");
+    var response = UrlFetchApp.fetch(url, options);
+    Logger.log("Response received");
+    var json = response.getContentText();
+    var data = JSON.parse(json);
   
-  global_questions = questions
-  global_answers = answers
-
-  if (inputText !== undefined) {
-    return createSelectionCard(e, inputText, generateQuestionsText(questions, answers));
+    var qaPairs = data.qa_pairs;
+    var questions = qaPairs.map(qa => qa.question);
+    var answers = qaPairs.map(qa => qa.answer);
+    if (inputText !== undefined) {
+      return createSelectionCard(e, generateQuestionsText(questions, answers));
+    }
   }
+  catch {
+    return createSelectionCard(e, 'Error generating questions. Try with less text or fewer questions.');
+  }
+  
 }
-
 
 /**
  * Helper function to create a new form with the generated qa pairs.
@@ -144,7 +142,7 @@ function generateQuestions(e) {
  * @param {[String | [Object]]} answers to questions
  * @return 
  */
- function createNewForm(e) {
+function createNewForm(e) {
   var form = FormApp.create(e.formInput.formTitle ?? "New Form")
   .setProgressBar(true)
   .setPublishingSummary(true)
@@ -152,7 +150,7 @@ function generateQuestions(e) {
   var questions = global_questions
   var answers = global_answers
   form.setDescription('Auto-generated quiz by QuizMe')
-  
+
   for (var i = 0; i < questions.length; i++) {
     if (getObjType(answers[i]) === 'array') { // MC Question
       var item = form.addMultipleChoiceItem().setPoints(1)
@@ -173,8 +171,8 @@ function generateQuestions(e) {
   console.log("completed form")
 }
 
-
 function generateQuestionsText(questions, answers) {
+  Logger.log("In Generate q text");
   var outputText = '';
   for (var i = 0; i < questions.length; i++) {
     outputText += `${i+1}. ` + questions[i] + '\n';
@@ -186,6 +184,7 @@ function generateQuestionsText(questions, answers) {
     }
     outputText += '\n';
   }
+  Logger.log(outputText);
   return outputText;
 }
 
@@ -249,7 +248,7 @@ function generateNumberDropdown(fieldName, previousSelected) {
  * Helper function to get the text selected.
  * @return {CardService.Card} The selected text.
  */
-function getDocsSelection(e) {
+function getDocsSelection() {
   var text = '';
   var selection = DocumentApp.getActiveDocument().getSelection();
   Logger.log(selection)
@@ -266,8 +265,7 @@ function getDocsSelection(e) {
   }
 
   if (text !== '') {
-    var transformation = "Not really a transformation, just the same text: " + text; 
-    return createSelectionCard(e, text, transformation);
+    return text;
   }
 }
 
