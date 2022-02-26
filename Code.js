@@ -108,32 +108,60 @@ function generateQuestions(e) {
   //   'payload' : JSON.stringify(data)
   // };
 
+
   var response = UrlFetchApp.fetch(url, options)
   var json = response.getContentText();
   var data = JSON.parse(json);
+
+  // var qaPairs = data.qa_pairs;
+  // var questions = qaPairs.map(qa => qa.question);
+  // var answers = qaPairs.map(qa => qa.answer);
+  // if (inputText !== undefined) {
+  //   return createSelectionCard(e, inputText, generateQuestionsText(questions, answers), answers);
+  // }
+
+
   var setup = data.body[0].setup
   var punchline = data.body[0].punchline
 
   if (inputText !== undefined) {
-    var outputText = setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
+    var outputText = inputText + '\n' + setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
     return createSelectionCard(e, inputText, outputText);
-    // var body = DocumentApp.getActiveDocument().getBody();
-    // body.appendParagraph('{newText}');
-    // body.appendParagraph('{setup}');
-    // body.appendParagraph('{punchline}');
-    // body.replaceText('{newText}', inputText);
-    // body.replaceText('{setup}', setup);
-    // body.replaceText('{punchline}', punchline);
+  }
+}
 
-    // // test parameters are set correctly
-    // body.appendParagraph('{numberOfQuestions}');
-    // body.appendParagraph('{shouldGenerateNewDoc}');
-    // body.appendParagraph('{shouldShowAnswers}');
-    // body.appendParagraph('{fontColor}');
-    // body.replaceText('{numberOfQuestions}', numberOfQuestions);
-    // body.replaceText('{shouldGenerateNewDoc}', shouldGenerateNewDoc);
-    // body.replaceText('{shouldShowAnswers}', shouldShowAnswers);
-    // body.replaceText('{fontColor}', fontColor);
+function generateQuestionsText(questions, answers) {
+  var outputText = '';
+  for (var i = 0; i < questions.length; i++) {
+    outputText += `{i}. ` + questions[i] + '\n';
+    if (getObjType(answers[i]) === 'array') {
+      // MC Question
+      for (var j = 0; j < answers[i].length; j++) {
+        outputText += answers[i][j].answer + '\n';
+      }
+    }
+    outputText += '\n';
+  }
+  return outputText;
+}
+
+// Helper function for us to check if it is an MC or open question
+// https://stackoverflow.com/questions/20664528/how-to-get-the-object-type
+function getObjType(obj) {
+  
+  // If the object is an array, this will return the stored value,
+  // if the object is a string, this will return only one letter of the string
+  var type = obj[0];
+  if (type.length == 1) {
+    return 'string';
+  }
+  try {
+    type = obj.foobar();
+  } catch (error) {
+    
+    // TypeError no longer contains object type, just return 'array'
+    Logger.log(error);
+    return 'array';
   }
 }
 
