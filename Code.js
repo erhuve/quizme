@@ -2,6 +2,9 @@ const DEFAULT_INPUT_TEXT = '';
 const DEFAULT_OUTPUT_TEXT = '';
 const NUM_LETTER_MAP = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
+var global_questions = ["Who is the president of the US?"]
+var global_answers = [[{'answer': 'Obama', 'correct': false}, {'answer': 'Biden', 'correct': true}]]
+
 /**
  * Callback for rendering the main card.
  * @return {CardService.Card} The card to show the user.
@@ -45,7 +48,6 @@ function createSelectionCard(e, inputText, outputText) {
 
   userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 10).setTitle("Number of questions"));
 
-
   builder.addSection(userInputSection);
   
   builder.addSection(CardService.newCardSection()
@@ -61,9 +63,16 @@ function createSelectionCard(e, inputText, outputText) {
       .setFieldName('output')
       .setValue(outputText)
       .setTitle('Questions...')
-      .setMultiline(true)
-    )
-  );
+      .setMultiline(true))
+    .addWidget(CardService.newTextInput()
+      .setFieldName('formTitle')
+      .setTitle('Enter title for form.'))
+    .addWidget(CardService.newButtonSet()
+      .addButton(CardService.newTextButton()
+      .setText("Create form")
+      .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
+      .setOnClickAction(CardService.newAction().setFunctionName('createNewForm'))
+      .setDisabled(outputText != DEFAULT_OUTPUT_TEXT))));
 
   return builder.build();
 
@@ -118,19 +127,52 @@ function generateQuestions(e) {
   var qaPairs = data.qa_pairs;
   var questions = qaPairs.map(qa => qa.question);
   var answers = qaPairs.map(qa => qa.answer);
+  
+  global_questions = questions
+  global_answers = answers
+
   if (inputText !== undefined) {
     return createSelectionCard(e, inputText, generateQuestionsText(questions, answers));
   }
-
-
-  // var setup = data.body[0].setup
-  // var punchline = data.body[0].punchline
-
-  // if (inputText !== undefined) {
-  //   var outputText = inputText + '\n' + setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
-  //   return createSelectionCard(e, inputText, outputText);
-  // }
 }
+
+
+/**
+ * Helper function to create a new form with the generated qa pairs.
+ * @param {String} title
+ * @param {[String]} generated questions
+ * @param {[String | [Object]]} answers to questions
+ * @return 
+ */
+ function createNewForm(e) {
+  var form = FormApp.create(e.formInput.formTitle ?? "New Form")
+  .setProgressBar(true)
+  .setPublishingSummary(true)
+  .setIsQuiz(true)
+  var questions = global_questions
+  var answers = global_answers
+  form.setDescription('Auto-generated quiz by QuizMe')
+  
+  for (var i = 0; i < questions.length; i++) {
+    if (getObjType(answers[i]) === 'array') { // MC Question
+      var item = form.addMultipleChoiceItem().setPoints(1)
+      var choices = answers[i].map(ans => 
+      item.createChoice(ans.answer, ans.correct)
+      )
+      item
+        .setTitle(questions[i])  
+        .setChoices(choices)
+        .setRequired(true); 
+    }
+    else { // Sentences Question
+      var item = form.addParagraphTextItem();
+      var feedback = FormApp.createFeedback().setText(answers[i])
+      item.setGeneralFeedback(feedback.build());
+    }
+  }
+  console.log("completed form")
+}
+
 
 function generateQuestionsText(questions, answers) {
   var outputText = '';
