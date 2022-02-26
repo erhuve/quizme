@@ -1,22 +1,12 @@
 const DEFAULT_INPUT_TEXT = '';
-
-const COLOR_MAP =
-  [
-    { text: 'Red', val: 'red' },
-    { text: 'Orange', val: 'orange' },
-    { text: 'Yellow', val: 'yellow' },
-    { text: 'Green', val: 'green' },
-    { text: 'Blue', val: 'blue' },
-    { text: 'Purple', val: 'purple' },
-    { text: 'Pink', val: 'pink' }
-  ]
+const DEFAULT_OUTPUT_TEXT = '';
 
 /**
  * Callback for rendering the main card.
  * @return {CardService.Card} The card to show the user.
  */
 function onHomepage(e) {
-  return createSelectionCard(e, DEFAULT_INPUT_TEXT);
+  return createSelectionCard(e, DEFAULT_INPUT_TEXT, DEFAULT_OUTPUT_TEXT);
 }
 
 /**
@@ -24,7 +14,7 @@ function onHomepage(e) {
  * @param {String} inputText The text used for generating questions.
  * @return {CardService.Card} The card to show to the user.
  */
-function createSelectionCard(e, inputText) {
+function createSelectionCard(e, inputText, outputText) {
   var hostApp = e['hostApp'];
   var builder = CardService.newCardBuilder();
   
@@ -52,16 +42,7 @@ function createSelectionCard(e, inputText) {
       .setFieldName("shouldShowAnswers")
       .setValue("true")));
 
-  userInputSection.addWidget(
-    CardService.newDecoratedText()
-      .setText("Generate new Google Doc with questions")
-      .setWrapText(true)
-      .setSwitchControl(CardService.newSwitch()
-        .setFieldName("shouldGenerateNewDoc")
-        .setValue("true")));
-
   userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 10).setTitle("Number of questions"));
-  userInputSection.addWidget(generateColorDropdown('fontColor', "red").setTitle("Font color for questions"));
 
 
   builder.addSection(userInputSection);
@@ -69,10 +50,19 @@ function createSelectionCard(e, inputText) {
   builder.addSection(CardService.newCardSection()
     .addWidget(CardService.newButtonSet()
       .addButton(CardService.newTextButton()
-        .setText('Add Text & Call an API')
+        .setText('Quiz me!')
         .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
-        .setOnClickAction(CardService.newAction().setFunctionName('appendToDocWithApiCall'))
+        .setOnClickAction(CardService.newAction().setFunctionName('generateQuestions'))
         .setDisabled(false))));
+
+  builder.addSection(CardService.newCardSection()
+    .addWidget(CardService.newTextInput()
+      .setFieldName('output')
+      .setValue(outputText)
+      .setTitle('Questions...')
+      .setMultiline(true)
+    )
+  );
 
   return builder.build();
 
@@ -90,7 +80,7 @@ function clearText(e) {
  * Helper function to append to the document
  * @return void, simply appends to the document
  */
-function appendToDocWithApiCall(e) {
+function generateQuestions(e) {
   var inputText = e.formInput.input ?? '';
   var numberOfQuestions = e.formInput.numberOfQuestions ?? 10;
   var shouldShowAnswers = e.formInput.shouldShowAnswers ?? 'false';
@@ -125,23 +115,25 @@ function appendToDocWithApiCall(e) {
   var punchline = data.body[0].punchline
 
   if (inputText !== undefined) {
-    var body = DocumentApp.getActiveDocument().getBody();
-    body.appendParagraph('{newText}');
-    body.appendParagraph('{setup}');
-    body.appendParagraph('{punchline}');
-    body.replaceText('{newText}', inputText);
-    body.replaceText('{setup}', setup);
-    body.replaceText('{punchline}', punchline);
+    var outputText = setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
+    return createSelectionCard(e, inputText, outputText);
+    // var body = DocumentApp.getActiveDocument().getBody();
+    // body.appendParagraph('{newText}');
+    // body.appendParagraph('{setup}');
+    // body.appendParagraph('{punchline}');
+    // body.replaceText('{newText}', inputText);
+    // body.replaceText('{setup}', setup);
+    // body.replaceText('{punchline}', punchline);
 
-    // test parameters are set correctly
-    body.appendParagraph('{numberOfQuestions}');
-    body.appendParagraph('{shouldGenerateNewDoc}');
-    body.appendParagraph('{shouldShowAnswers}');
-    body.appendParagraph('{fontColor}');
-    body.replaceText('{numberOfQuestions}', numberOfQuestions);
-    body.replaceText('{shouldGenerateNewDoc}', shouldGenerateNewDoc);
-    body.replaceText('{shouldShowAnswers}', shouldShowAnswers);
-    body.replaceText('{fontColor}', fontColor);
+    // // test parameters are set correctly
+    // body.appendParagraph('{numberOfQuestions}');
+    // body.appendParagraph('{shouldGenerateNewDoc}');
+    // body.appendParagraph('{shouldShowAnswers}');
+    // body.appendParagraph('{fontColor}');
+    // body.replaceText('{numberOfQuestions}', numberOfQuestions);
+    // body.replaceText('{shouldGenerateNewDoc}', shouldGenerateNewDoc);
+    // body.replaceText('{shouldShowAnswers}', shouldShowAnswers);
+    // body.replaceText('{fontColor}', fontColor);
   }
 }
 
@@ -174,7 +166,7 @@ function generateNumberDropdown(fieldName, previousSelected) {
     .setFieldName(fieldName)
     .setType(CardService.SelectionInputType.DROPDOWN);
 
-  for (i = 5; i < 25; i = i + 5) { //starts loop
+  for (i = 1; i <= 10; i = i + 1) { //starts loop
     selectionInput.addItem(`${i}`, i, i == previousSelected);
   };
 
