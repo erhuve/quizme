@@ -1,5 +1,6 @@
 const DEFAULT_INPUT_TEXT = '';
 const DEFAULT_OUTPUT_TEXT = '';
+const NUM_LETTER_MAP = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 /**
  * Callback for rendering the main card.
@@ -85,59 +86,60 @@ function generateQuestions(e) {
   var numberOfQuestions = e.formInput.numberOfQuestions ?? 10;
   var shouldShowAnswers = e.formInput.shouldShowAnswers ?? 'false';
   var shouldGenerateNewDoc = e.formInput.shouldGenerateNewDoc ?? 'false'; // TODO: generate new doc w/ questions
-  var fontColor = e.formInput.fontColor ?? 'red'; // TODO: write questions in fontColor
+  // var fontColor = e.formInput.fontColor ?? 'red'; // TODO: write questions in fontColor
 
-  var query = "joke"
-  var url = "https://dad-jokes.p.rapidapi.com/random/" + query; // TODO: Call http://104.198.92.212/ instead
-  var options = {
-    headers: {
-      'x-rapidapi-host': 'dad-jokes.p.rapidapi.com',
-      'x-rapidapi-key': '2aad18d4aamshe379f00afc91688p10252ajsn2974d3aeb21d'
-    }
-  }
-  
-  // var data = {
-  //   'inputText': inputText,
-  //   'numberOfQuestions': numberOfQuestions,
-  //   'shouldShowAnswers': shouldShowAnswers
-  // }
+  // var query = "joke"
+  // var url = "https://dad-jokes.p.rapidapi.com/random/" + query; // TODO: Call http://104.198.92.212/ instead
   // var options = {
-  //   'method' : 'post',
-  //   'contentType': 'application/json',
-  //   // Convert the JavaScript object to a JSON string.
-  //   'payload' : JSON.stringify(data)
-  // };
+  //   headers: {
+  //     'x-rapidapi-host': 'dad-jokes.p.rapidapi.com',
+  //     'x-rapidapi-key': '2aad18d4aamshe379f00afc91688p10252ajsn2974d3aeb21d'
+  //   }
+  // }
+  var url = 'http://104.198.92.212';
+  var data = {
+    'text': inputText,
+    'num_questions': numberOfQuestions,
+    'answer_style': 'multiple_choice'
+  };
+  var options = {
+    'method' : 'post',
+    'contentType': 'application/json',
+    'muteHttpExceptions': true,
+    // Convert the JavaScript object to a JSON string.
+    'payload' : JSON.stringify(data)
+  };
 
 
-  var response = UrlFetchApp.fetch(url, options)
+  var response = UrlFetchApp.fetch(url, options);
   var json = response.getContentText();
   var data = JSON.parse(json);
 
-  // var qaPairs = data.qa_pairs;
-  // var questions = qaPairs.map(qa => qa.question);
-  // var answers = qaPairs.map(qa => qa.answer);
-  // if (inputText !== undefined) {
-  //   return createSelectionCard(e, inputText, generateQuestionsText(questions, answers), answers);
-  // }
-
-
-  var setup = data.body[0].setup
-  var punchline = data.body[0].punchline
-
+  var qaPairs = data.qa_pairs;
+  var questions = qaPairs.map(qa => qa.question);
+  var answers = qaPairs.map(qa => qa.answer);
   if (inputText !== undefined) {
-    var outputText = inputText + '\n' + setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
-    return createSelectionCard(e, inputText, outputText);
+    return createSelectionCard(e, inputText, generateQuestionsText(questions, answers));
   }
+
+
+  // var setup = data.body[0].setup
+  // var punchline = data.body[0].punchline
+
+  // if (inputText !== undefined) {
+  //   var outputText = inputText + '\n' + setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
+  //   return createSelectionCard(e, inputText, outputText);
+  // }
 }
 
 function generateQuestionsText(questions, answers) {
   var outputText = '';
   for (var i = 0; i < questions.length; i++) {
-    outputText += `{i}. ` + questions[i] + '\n';
+    outputText += `${i+1}. ` + questions[i] + '\n';
     if (getObjType(answers[i]) === 'array') {
       // MC Question
       for (var j = 0; j < answers[i].length; j++) {
-        outputText += answers[i][j].answer + '\n';
+        outputText += NUM_LETTER_MAP[j] + '. ' + answers[i][j].answer + '\n';
       }
     }
     outputText += '\n';
