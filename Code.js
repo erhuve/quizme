@@ -7,7 +7,7 @@ const NUM_LETTER_MAP = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
  * @return {CardService.Card} The card to show the user.
  */
 function onHomepage(e) {
-  return createSelectionCard(e, DEFAULT_INPUT_TEXT, DEFAULT_OUTPUT_TEXT);
+  return createSelectionCard(e, DEFAULT_OUTPUT_TEXT);
 }
 
 /**
@@ -77,7 +77,7 @@ function createSelectionCard(e, outputText) {
  * @return {CardService.Card} The card to show to the user.
  */
 function clearText(e) {
-  return createSelectionCard(e, DEFAULT_INPUT_TEXT);
+  return createSelectionCard(e, DEFAULT_OUTPUT_TEXT);
 }
 
 /**
@@ -91,16 +91,7 @@ function generateQuestions(e) {
   var numberOfQuestions = e.formInput.numberOfQuestions ?? 10;
   var shouldShowAnswers = e.formInput.shouldShowAnswers ?? 'false';
   var shouldGenerateNewDoc = e.formInput.shouldGenerateNewDoc ?? 'false'; // TODO: generate new doc w/ questions
-  // var fontColor = e.formInput.fontColor ?? 'red'; // TODO: write questions in fontColor
 
-  // var query = "joke"
-  // var url = "https://dad-jokes.p.rapidapi.com/random/" + query; // TODO: Call http://104.198.92.212/ instead
-  // var options = {
-  //   headers: {
-  //     'x-rapidapi-host': 'dad-jokes.p.rapidapi.com',
-  //     'x-rapidapi-key': '2aad18d4aamshe379f00afc91688p10252ajsn2974d3aeb21d'
-  //   }
-  // }
   var url = 'http://104.198.92.212';
   var data = {
     'text': inputText,
@@ -126,22 +117,13 @@ function generateQuestions(e) {
     var questions = qaPairs.map(qa => qa.question);
     var answers = qaPairs.map(qa => qa.answer);
     if (inputText !== undefined) {
-      return createSelectionCard(e, inputText, generateQuestionsText(questions, answers));
+      return createSelectionCard(e, generateQuestionsText(questions, answers));
     }
   }
   catch {
-    return createSelectionCard(e, inputText, 'Error generating questions. Try with less text or fewer questions.');
+    return createSelectionCard(e, 'Error generating questions. Try with less text or fewer questions.');
   }
   
-
-
-  // var setup = data.body[0].setup
-  // var punchline = data.body[0].punchline
-
-  // if (inputText !== undefined) {
-  //   var outputText = inputText + '\n' + setup + '\n' + punchline + '\n' + numberOfQuestions + '\n' + shouldShowAnswers;
-  //   return createSelectionCard(e, inputText, outputText);
-  // }
 }
 
 function generateQuestionsText(questions, answers) {
