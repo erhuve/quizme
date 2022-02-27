@@ -1,9 +1,6 @@
 const DEFAULT_TEXT = '';
 const NUM_LETTER_MAP = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
-var global_questions = ["Who is the president of the US?"]
-var global_answers = [[{'answer': 'Obama', 'correct': false}, {'answer': 'Biden', 'correct': true}]]
-
 /**
  * Callback for rendering the main card.
  * @return {CardService.Card} The card to show the user.
@@ -36,8 +33,6 @@ function createSelectionCard(e, questionsText=DEFAULT_TEXT, answersText=DEFAULT_
 
   else {
     var userInputSection = CardService.newCardSection();
-    // userInputSection.setHeader("Let's create a quiz!")
-
     userInputSection.addWidget(CardService.newTextParagraph()
       .setText("Select text in the doc you want to generate questions for, and fill out the fields below."));
     //   .addWidget(CardService.newTextInput()
@@ -203,8 +198,11 @@ function generateAnswersText(answers) {
   return outputText;
 }
 
-// Helper function for us to check if it is an MC or open question
-// https://stackoverflow.com/questions/20664528/how-to-get-the-object-type
+/**
+ * Helper function for us to check if it is an MC or open question
+ * @param {Object} obj
+ * https://stackoverflow.com/questions/20664528/how-to-get-the-object-type
+*/
 function getObjType(obj) {
   
   // If the object is an array, this will return the stored value,
