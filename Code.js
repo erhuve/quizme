@@ -2,6 +2,9 @@ const DEFAULT_INPUT_TEXT = '';
 const DEFAULT_OUTPUT_TEXT = '';
 const NUM_LETTER_MAP = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
+var global_questions = ["Who is the president of the US?"]
+var global_answers = [[{'answer': 'Obama', 'correct': false}, {'answer': 'Biden', 'correct': true}]]
+
 /**
  * Callback for rendering the main card.
  * @return {CardService.Card} The card to show the user.
@@ -19,57 +22,68 @@ function createSelectionCard(e, outputText) {
   var hostApp = e['hostApp'];
   var builder = CardService.newCardBuilder();
   
-  var userInputSection = CardService.newCardSection();
-  //   .addWidget(CardService.newTextInput()
-  //     .setFieldName('input')
-  //     .setValue(inputText)
-  //     .setTitle('Enter text to generate questions from...')
-  //     .setMultiline(true));
+  if (outputText != DEFAULT_OUTPUT_TEXT) {
+    builder.addSection(CardService.newCardSection()
+      .setHeader("Questions")
+      .addWidget(CardService.newTextInput()
+        .setFieldName('output')
+        .setValue(outputText)
+        .setMultiline(true))); 
+  }
 
-  // userInputSection.addWidget(CardService.newButtonSet()
-  //   .addButton(CardService.newTextButton()
-  //     .setText('Copy Selected Text')
-  //     .setOnClickAction(CardService.newAction().setFunctionName('getDocsSelection'))
-  //     .setDisabled(false))
-  //   .addButton(CardService.newTextButton()
-  //     .setText('Clear')
-  //     .setOnClickAction(CardService.newAction().setFunctionName('clearText'))
-  //     .setDisabled(false)));
+  else {
+    var userInputSection = CardService.newCardSection();
+    // userInputSection.setHeader("Let's create a quiz!")
 
-  userInputSection.addWidget(CardService.newDecoratedText()
-    .setText("Show answers")
-    .setWrapText(true)
-    .setSwitchControl(CardService.newSwitch()
-      .setFieldName("shouldShowAnswers")
-      .setValue("true")));
+    userInputSection.addWidget(CardService.newTextParagraph()
+      .setText("Select text in the doc you want to generate questions for, and fill out the fields below."));
+    //   .addWidget(CardService.newTextInput()
+    //     .setFieldName('input')
+    //     .setValue(inputText)
+    //     .setTitle('Enter text to generate questions from...')
+    //     .setMultiline(true));
 
-  userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 5).setTitle("Max number of questions"));
+    // userInputSection.addWidget(CardService.newButtonSet()
+    //   .addButton(CardService.newTextButton()
+    //     .setText('Copy Selected Text')
+    //     .setOnClickAction(CardService.newAction().setFunctionName('getDocsSelection'))
+    //     .setDisabled(false))
+    //   .addButton(CardService.newTextButton()
+    //     .setText('Clear')
+    //     .setOnClickAction(CardService.newAction().setFunctionName('clearText'))
+    //     .setDisabled(false)));
 
+    userInputSection.addWidget(CardService.newDecoratedText()
+      .setText("Show answers")
+      .setWrapText(true)
+      .setSwitchControl(CardService.newSwitch()
+        .setFieldName("shouldShowAnswers")
+        .setValue("true")));
 
-  builder.addSection(userInputSection);
-  builder.addSection(CardService.newCardSection()
-    .addWidget(CardService.newTextParagraph()
-    .setText("Highlight select text in the document, then click the button!")));
-  
-  builder.addSection(CardService.newCardSection()
-    .addWidget(CardService.newButtonSet()
-      .addButton(CardService.newTextButton()
-        .setText('Quiz me!')
-        .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
-        .setOnClickAction(CardService.newAction().setFunctionName('generateQuestions'))
-        .setDisabled(false))));
+    userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 5).setTitle("Max number of questions"));
+    
+    userInputSection
+      .addWidget(CardService.newDecoratedText()
+        .setText("Create Google Form")
+        .setWrapText(true)
+        .setSwitchControl(CardService.newSwitch()
+          .setFieldName("shouldCreateNewForm")
+          .setValue("false")))
+      .addWidget(CardService.newTextInput()
+        .setFieldName('formTitle')
+        .setTitle('Enter title for form.'));
 
-  builder.addSection(CardService.newCardSection()
-    .addWidget(CardService.newTextInput()
-      .setFieldName('output')
-      .setValue(outputText)
-      .setTitle('Questions...')
-      .setMultiline(true)
-    )
-  );
+    userInputSection.addWidget(CardService.newTextButton()
+          .setText('Quiz me!')
+          .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
+          .setOnClickAction(CardService.newAction().setFunctionName('generateQuestions'))
+          .setDisabled(false))
+    
+    builder.addSection(userInputSection);
 
+    builder.build()
+  }
   return builder.build();
-
 }
 
 /**
@@ -116,7 +130,11 @@ function generateQuestions(e) {
     var qaPairs = data.qa_pairs;
     var questions = qaPairs.map(qa => qa.question);
     var answers = qaPairs.map(qa => qa.answer);
+
     if (inputText !== undefined) {
+      if (e.formInput.shouldCreateNewForm) { 
+        createNewForm(e, questions, answers)
+      }
       return createSelectionCard(e, generateQuestionsText(questions, answers));
     }
   }
@@ -124,6 +142,39 @@ function generateQuestions(e) {
     return createSelectionCard(e, 'Error generating questions. Try with less text or fewer questions.');
   }
   
+}
+
+/**
+ * Helper function to create a new form with the generated qa pairs.
+ * @param {String} title
+ * @param {[String]} generated questions
+ * @param {[String | [Object]]} answers to questions
+ * @return 
+ */
+function createNewForm(e, questions, answers) {
+  var form = FormApp.create(e.formInput.formTitle ?? "New Form")
+  .setProgressBar(true)
+  .setPublishingSummary(true)
+  .setIsQuiz(true)
+  form.setDescription('Auto-generated quiz by QuizMe')
+
+  for (var i = 0; i < questions.length; i++) {
+    if (getObjType(answers[i]) === 'array') { // MC Question
+      var item = form.addMultipleChoiceItem().setPoints(1)
+      var choices = answers[i].map(ans => 
+      item.createChoice(ans.answer, ans.correct)
+      )
+      item
+        .setTitle(questions[i])  
+        .setChoices(choices)
+        .setRequired(true); 
+    }
+    else { // Sentences Question
+      var item = form.addParagraphTextItem();
+      var feedback = FormApp.createFeedback().setText(answers[i])
+      item.setGeneralFeedback(feedback.build());
+    }
+  }
 }
 
 function generateQuestionsText(questions, answers) {
