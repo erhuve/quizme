@@ -1,5 +1,4 @@
-const DEFAULT_INPUT_TEXT = '';
-const DEFAULT_OUTPUT_TEXT = '';
+const DEFAULT_TEXT = '';
 const NUM_LETTER_MAP = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 var global_questions = ["Who is the president of the US?"]
@@ -10,7 +9,7 @@ var global_answers = [[{'answer': 'Obama', 'correct': false}, {'answer': 'Biden'
  * @return {CardService.Card} The card to show the user.
  */
 function onHomepage(e) {
-  return createSelectionCard(e, DEFAULT_OUTPUT_TEXT);
+  return createSelectionCard(e);
 }
 
 /**
@@ -18,17 +17,21 @@ function onHomepage(e) {
  * @param {String} inputText The text used for generating questions.
  * @return {CardService.Card} The card to show to the user.
  */
-function createSelectionCard(e, outputText) {
+function createSelectionCard(e, questionsText=DEFAULT_TEXT, answersText=DEFAULT_TEXT) {
   var hostApp = e['hostApp'];
   var builder = CardService.newCardBuilder();
   
-  if (outputText != DEFAULT_OUTPUT_TEXT) {
+  if (questionsText != DEFAULT_TEXT) {
     builder.addSection(CardService.newCardSection()
       .setHeader("Questions")
-      .addWidget(CardService.newTextInput()
-        .setFieldName('output')
-        .setValue(outputText)
-        .setMultiline(true))); 
+      .addWidget(CardService.newTextParagraph()
+        .setText(questionsText)));
+
+    builder.addSection(CardService.newCardSection()
+      .setCollapsible(true)
+      .setHeader("Answers")
+      .addWidget(CardService.newTextParagraph()
+      .setText(answersText)));
   }
 
   else {
@@ -52,13 +55,6 @@ function createSelectionCard(e, outputText) {
     //     .setText('Clear')
     //     .setOnClickAction(CardService.newAction().setFunctionName('clearText'))
     //     .setDisabled(false)));
-
-    userInputSection.addWidget(CardService.newDecoratedText()
-      .setText("Show answers")
-      .setWrapText(true)
-      .setSwitchControl(CardService.newSwitch()
-        .setFieldName("shouldShowAnswers")
-        .setValue("true")));
 
     userInputSection.addWidget(generateNumberDropdown('numberOfQuestions', 5).setTitle("Max number of questions"));
     
@@ -91,7 +87,7 @@ function createSelectionCard(e, outputText) {
  * @return {CardService.Card} The card to show to the user.
  */
 function clearText(e) {
-  return createSelectionCard(e, DEFAULT_OUTPUT_TEXT);
+  return createSelectionCard(e);
 }
 
 /**
@@ -103,8 +99,6 @@ function generateQuestions(e) {
   var inputText = getDocsSelection();
   Logger.log(inputText);
   var numberOfQuestions = e.formInput.numberOfQuestions ?? 10;
-  var shouldShowAnswers = e.formInput.shouldShowAnswers ?? 'false';
-  var shouldGenerateNewDoc = e.formInput.shouldGenerateNewDoc ?? 'false'; // TODO: generate new doc w/ questions
 
   var url = 'http://104.198.92.212';
   var data = {
@@ -135,7 +129,7 @@ function generateQuestions(e) {
       if (e.formInput.shouldCreateNewForm) { 
         createNewForm(e, questions, answers)
       }
-      return createSelectionCard(e, generateQuestionsText(questions, answers));
+      return createSelectionCard(e, generateQuestionsText(questions, answers), generateAnswersText(answers));
     }
   }
   catch {
@@ -178,7 +172,7 @@ function createNewForm(e, questions, answers) {
 }
 
 function generateQuestionsText(questions, answers) {
-  Logger.log("In Generate q text");
+  Logger.log("In generateQuestionsText");
   var outputText = '';
   for (var i = 0; i < questions.length; i++) {
     outputText += `${i+1}. ` + questions[i] + '\n';
@@ -189,6 +183,21 @@ function generateQuestionsText(questions, answers) {
       }
     }
     outputText += '\n';
+  }
+  Logger.log(outputText);
+  return outputText;
+}
+
+function generateAnswersText(answers) {
+  Logger.log("In generateAnswersText");
+  var outputText = '';
+  for (var i = 0; i < answers.length; i++) {
+    outputText += `${i+1}. `;
+    if (getObjType(answers[i]) === 'array') {
+      // MC Question
+      correctIndex = answers[i].findIndex(ans => ans.correct)
+      outputText += NUM_LETTER_MAP[correctIndex] + '. ' + answers[i][correctIndex].answer + '\n';
+    }
   }
   Logger.log(outputText);
   return outputText;
